@@ -12,6 +12,8 @@ const categories = [
   'Cultural'
 ];
 
+const pageSizes = [9, 18, 27];
+
 const Events = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -25,10 +27,12 @@ const Events = () => {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [retryKey, setRetryKey] = useState(0);
 
   const search = searchParams.get('search') || '';
   const category = searchParams.get('category') || '';
   const page = Number(searchParams.get('page') || 1);
+  const limit = Number(searchParams.get('limit') || 9);
 
   const [searchInput, setSearchInput] = useState(search);
 
@@ -51,9 +55,8 @@ const Events = () => {
       }
 
       next.set('page', '1');
-
       setSearchParams(next);
-    }, 350);
+    }, 300);
 
     return () => clearTimeout(timer);
   }, [searchInput, search, searchParams, setSearchParams]);
@@ -69,7 +72,7 @@ const Events = () => {
             search,
             category,
             page,
-            limit: 9
+            limit: pageSizes.includes(limit) ? limit : 9
           }
         });
 
@@ -78,7 +81,7 @@ const Events = () => {
         setPagination(
           response.data.pagination || {
             page: 1,
-            limit: 9,
+            limit,
             total: 0,
             totalPages: 0
           }
@@ -96,7 +99,7 @@ const Events = () => {
     };
 
     fetchEvents();
-  }, [search, category, page]);
+  }, [search, category, page, limit, retryKey]);
 
   const hasFilters = Boolean(search || category);
 
@@ -114,20 +117,25 @@ const Events = () => {
     } available`;
   }, [loading, pagination.total, hasFilters]);
 
-  const handleCategoryChange = (event) => {
-    const value = event.target.value;
-
+  const updateParam = (key, value) => {
     const next = new URLSearchParams(searchParams);
 
     if (value) {
-      next.set('category', value);
+      next.set(key, value);
     } else {
-      next.delete('category');
+      next.delete(key);
     }
 
     next.set('page', '1');
-
     setSearchParams(next);
+  };
+
+  const handleCategoryChange = (event) => {
+    updateParam('category', event.target.value);
+  };
+
+  const handlePageSizeChange = (event) => {
+    updateParam('limit', event.target.value === '9' ? '' : event.target.value);
   };
 
   const clearFilters = () => {
@@ -146,17 +154,16 @@ const Events = () => {
 
     const next = new URLSearchParams(searchParams);
     next.set('page', String(nextPage));
-
     setSearchParams(next);
 
     window.scrollTo({
-      top: 420,
+      top: 380,
       behavior: 'smooth'
     });
   };
 
   const retry = () => {
-    setSearchParams(new URLSearchParams(searchParams));
+    setRetryKey((current) => current + 1);
   };
 
   const visiblePages = useMemo(() => {
@@ -196,16 +203,14 @@ const Events = () => {
 
   return (
     <div className="events-page">
-
-      {/* =====================================================
-          HERO
-      ===================================================== */}
-
       <section className="events-hero">
-
         <div className="events-hero-glow" />
+        <div className="events-hero-grid" />
 
         <div className="events-hero-content">
+          <span className="events-hero-badge">
+            <span /> Live event discovery
+          </span>
 
           <p className="events-eyebrow">
             DISCOVER WHAT'S NEXT
@@ -218,35 +223,41 @@ const Events = () => {
           </h1>
 
           <p>
-            Find events that match your interests,
-            discover something new, and make your
-            next experience count.
+            Search the latest EventHub experiences by name,
+            category, or place and find your next reason to go out.
           </p>
 
+          <div className="events-hero-microcopy">
+            <span>Fast search</span>
+            <span>Live availability</span>
+            <span>Instant registration</span>
+          </div>
         </div>
-
       </section>
 
-      {/* =====================================================
-          SEARCH / FILTER PANEL
-      ===================================================== */}
-
       <div className="events-controls-wrap">
-
         <div className="events-controls">
-
           <div className="events-search">
             <span aria-hidden="true">⌕</span>
 
             <input
               type="search"
               value={searchInput}
-              onChange={(event) =>
-                setSearchInput(event.target.value)
-              }
+              onChange={(event) => setSearchInput(event.target.value)}
               placeholder="Search events, categories or places..."
               aria-label="Search events"
             />
+
+            {searchInput && (
+              <button
+                type="button"
+                className="events-search-clear"
+                onClick={() => setSearchInput('')}
+                aria-label="Clear search"
+              >
+                ×
+              </button>
+            )}
           </div>
 
           <select
@@ -256,10 +267,22 @@ const Events = () => {
             aria-label="Filter events by category"
           >
             <option value="">All categories</option>
-
             {categories.map((item) => (
               <option key={item} value={item}>
                 {item}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="events-category events-page-size"
+            value={String(pageSizes.includes(limit) ? limit : 9)}
+            onChange={handlePageSizeChange}
+            aria-label="Events per page"
+          >
+            {pageSizes.map((size) => (
+              <option key={size} value={size}>
+                {size} per page
               </option>
             ))}
           </select>
@@ -270,85 +293,71 @@ const Events = () => {
               className="events-clear-button"
               onClick={clearFilters}
             >
-              Clear
+              Clear all
             </button>
           )}
-
         </div>
 
+        <div className="events-category-chips" aria-label="Quick categories">
+          <button
+            type="button"
+            className={!category ? 'active' : ''}
+            onClick={() => updateParam('category', '')}
+          >
+            All
+          </button>
+
+          {categories.map((item) => (
+            <button
+              type="button"
+              key={item}
+              className={category === item ? 'active' : ''}
+              onClick={() => updateParam('category', item)}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* =====================================================
-          CONTENT
-      ===================================================== */}
-
       <section className="events-content">
-
         <div className="events-heading">
-
           <div>
-            <p className="section-eyebrow">
-              EVENT DISCOVERY
-            </p>
-
+            <p className="section-eyebrow">EVENT DISCOVERY</p>
             <h2>Find your next experience.</h2>
-
             <p>{resultText}</p>
           </div>
 
-          {hasFilters && !loading && (
-            <div className="events-active-filters">
+          <div className="events-heading-meta">
+            {hasFilters && !loading && (
+              <div className="events-active-filters">
+                {search && (
+                  <span className="events-filter-chip">
+                    Search: “{search}”
+                  </span>
+                )}
 
-              {search && (
-                <span className="events-filter-chip">
-                  Search: "{search}"
-                </span>
-              )}
+                {category && (
+                  <span className="events-filter-chip">
+                    {category}
+                  </span>
+                )}
+              </div>
+            )}
 
-              {category && (
-                <span className="events-filter-chip">
-                  {category}
-                </span>
-              )}
-
-            </div>
-          )}
-
-        </div>
-
-        {/* ERROR */}
-
-        {!loading && error && (
-          <div className="events-state events-error-state">
-
-            <div className="events-state-icon">!</div>
-
-            <h3>Something went wrong</h3>
-
-            <p>{error}</p>
-
-            <button
-              type="button"
-              onClick={retry}
-            >
-              Try again
-            </button>
-
+            {!loading && pagination.total > 0 && (
+              <span className="events-page-indicator">
+                Page {page} of {pagination.totalPages}
+              </span>
+            )}
           </div>
-        )}
-
-        {/* LOADING */}
+        </div>
 
         {loading && (
           <div className="events-grid">
-
-            {Array.from({ length: 6 }).map((_, index) => (
-              <div
-                className="event-card event-card-loading"
-                key={index}
-              >
+            {Array.from({ length: limit }, (_, index) => (
+              <div className="event-card event-card-loading" key={index}>
                 <div className="event-card-loading-image" />
-
                 <div className="event-card-loading-content">
                   <span />
                   <span />
@@ -357,125 +366,87 @@ const Events = () => {
                 </div>
               </div>
             ))}
-
           </div>
         )}
 
-        {/* EMPTY */}
+        {!loading && error && (
+          <div className="events-state events-state-upgraded">
+            <div className="events-state-icon">!</div>
+            <p className="section-eyebrow">TEMPORARILY UNAVAILABLE</p>
+            <h3>We couldn't load the event library.</h3>
+            <p>{error}</p>
+            <button type="button" onClick={retry}>
+              Try again <span>→</span>
+            </button>
+          </div>
+        )}
 
-        {!loading &&
-          !error &&
-          events.length === 0 && (
-            <div className="events-state">
+        {!loading && !error && events.length === 0 && (
+          <div className="events-state events-empty-upgraded">
+            <div className="events-state-icon">⌕</div>
+            <p className="section-eyebrow">NOTHING FOUND</p>
+            <h3>
+              {hasFilters
+                ? 'No experiences match those filters.'
+                : 'There are no published events yet.'}
+            </h3>
+            <p>
+              {hasFilters
+                ? 'Try a different search term or clear your filters to see everything.'
+                : 'Check back soon for the next EventHub experience.'}
+            </p>
+            {hasFilters && (
+              <button type="button" onClick={clearFilters}>
+                Clear filters <span>→</span>
+              </button>
+            )}
+          </div>
+        )}
 
-              <div className="events-state-icon">
-                ✦
-              </div>
+        {!loading && !error && events.length > 0 && (
+          <div className="events-grid">
+            {events.map((event) => (
+              <EventCard key={event._id} event={event} />
+            ))}
+          </div>
+        )}
 
-              <h3>
-                {hasFilters
-                  ? 'Nothing matched your search'
-                  : 'No events yet'}
-              </h3>
+        {!loading && !error && pagination.totalPages > 1 && (
+          <div className="events-pagination">
+            <button
+              type="button"
+              onClick={() => changePage(page - 1)}
+              disabled={page <= 1}
+            >
+              ←
+            </button>
 
-              <p>
-                {hasFilters
-                  ? 'Try a different search or remove your filters.'
-                  : 'New experiences will appear here soon.'}
-              </p>
-
-              {hasFilters && (
+            {visiblePages.map((item, index) => (
+              item === '...' ? (
+                <span key={`ellipsis-${index}`} className="events-pagination-ellipsis">
+                  …
+                </span>
+              ) : (
                 <button
                   type="button"
-                  onClick={clearFilters}
+                  key={item}
+                  className={item === page ? 'active' : ''}
+                  onClick={() => changePage(item)}
                 >
-                  Clear filters
+                  {item}
                 </button>
-              )}
+              )
+            ))}
 
-            </div>
-          )}
-
-        {/* RESULTS */}
-
-        {!loading &&
-          !error &&
-          events.length > 0 && (
-            <>
-              <div className="events-grid">
-
-                {events.map((event) => (
-                  <EventCard
-                    key={event._id}
-                    event={event}
-                  />
-                ))}
-
-              </div>
-
-              {/* PAGINATION */}
-
-              {pagination.totalPages > 1 && (
-                <div className="events-pagination">
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      changePage(page - 1)
-                    }
-                    disabled={page === 1}
-                  >
-                    ← Previous
-                  </button>
-
-                  <div className="events-page-numbers">
-
-                    {visiblePages.map((item, index) =>
-                      item === '...' ? (
-                        <span
-                          key={`ellipsis-${index}`}
-                          className="events-page-ellipsis"
-                        >
-                          …
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          key={item}
-                          className={
-                            item === page
-                              ? 'active'
-                              : ''
-                          }
-                          onClick={() =>
-                            changePage(item)
-                          }
-                        >
-                          {item}
-                        </button>
-                      )
-                    )}
-
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      changePage(page + 1)
-                    }
-                    disabled={
-                      page === pagination.totalPages
-                    }
-                  >
-                    Next →
-                  </button>
-
-                </div>
-              )}
-
-            </>
-          )}
-
+            <button
+              type="button"
+              onClick={() => changePage(page + 1)}
+              disabled={page >= pagination.totalPages}
+            >
+              →
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );

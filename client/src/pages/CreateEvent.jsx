@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import apiClient from '../services/api';
+import EventLivePreview from '../components/EventLivePreview';
 
 const todayString = () => {
   const today = new Date();
@@ -121,6 +122,7 @@ const CreateEvent = () => {
         </p>
       </div>
 
+      <div className="event-editor-layout">
       <section className="create-event-card">
         <div className="create-event-card-heading">
           <h2>Event details</h2>
@@ -288,6 +290,9 @@ const CreateEvent = () => {
           </div>
         </form>
       </section>
+
+      <EventLivePreview formData={formData} mode="create" />
+      </div>
     </div>
   );
 };

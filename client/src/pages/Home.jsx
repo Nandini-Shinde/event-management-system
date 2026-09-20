@@ -46,6 +46,7 @@ const Home = () => {
   const heroEventDate = formatEventDateRange(heroEvent?.date || '2026-12-15', heroEvent?.endDate);
   const heroEventLocation =
     heroEvent?.location || 'College Auditorium';
+  const heroEventImage = heroEvent?.image || '';
 
   return (
     <div className="home-page">
@@ -108,7 +109,7 @@ const Home = () => {
             </div>
 
             <div>
-              <strong>Built for experiences</strong>
+              <strong>{events.length || 'New'} live experiences</strong>
               <p>Find your next unforgettable event.</p>
             </div>
           </div>

@@ -18,6 +18,19 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const handleAuthExpired = () => {
+      localStorage.removeItem('jwtToken');
+      setUser(null);
+    };
+
+    window.addEventListener('eventhub:auth-expired', handleAuthExpired);
+
+    return () => {
+      window.removeEventListener('eventhub:auth-expired', handleAuthExpired);
+    };
+  }, []);
+
+  useEffect(() => {
     const token = localStorage.getItem('jwtToken');
 
     if (!token) {

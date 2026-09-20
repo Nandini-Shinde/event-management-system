@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import apiClient from '../services/api';
+import EventLivePreview from '../components/EventLivePreview';
 
 const toDateInput = (value) => {
   if (!value) return '';
@@ -183,6 +184,7 @@ const EditEvent = () => {
         </p>
       </div>
 
+      <div className="event-editor-layout">
       <section className="create-event-card">
         <div className="create-event-card-heading">
           <h2>Event details</h2>
@@ -341,6 +343,9 @@ const EditEvent = () => {
           </div>
         </form>
       </section>
+
+      <EventLivePreview formData={formData} mode="edit" />
+      </div>
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -7,9 +7,12 @@ const Navbar = () => {
   const location = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountRef = useRef(null);
 
   useEffect(() => {
     setMobileOpen(false);
+    setAccountOpen(false);
   }, [location.pathname, location.search]);
 
   useEffect(() => {
@@ -20,72 +23,73 @@ const Navbar = () => {
     };
   }, [mobileOpen]);
 
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      if (!accountRef.current?.contains(event.target)) {
+        setAccountOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+    };
+  }, []);
+
   const handleLogout = () => {
     logout();
     setMobileOpen(false);
+    setAccountOpen(false);
     navigate('/');
   };
 
-  const getUserName = () => {
-    if (!user) return '';
+  const userName =
+    user?.name ||
+    user?.email?.split('@')[0] ||
+    'Account';
 
-    return (
-      user.name ||
-      user.email?.split('@')[0] ||
-      'Account'
-    );
-  };
-
-  const userName = getUserName();
   const isAdmin = user?.role === 'admin';
+  const initials = userName
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('') || 'A';
+
+  const navClass = ({ isActive }) =>
+    `navbar-link ${isActive ? 'active' : ''}`;
+
+  const mobileClass = ({ isActive }) =>
+    `navbar-mobile-link ${isActive ? 'active' : ''}`;
 
   return (
     <>
       <header className="site-navbar">
         <div className="navbar-inner">
-          <NavLink to="/" className="navbar-brand" aria-label="EventHub home">
+          <NavLink
+            to="/"
+            className="navbar-brand"
+            aria-label="EventHub home"
+          >
             <span className="navbar-brand-event">Event</span>
             <span className="navbar-brand-hub">Hub</span>
+            <span className="navbar-brand-mark" aria-hidden="true">•</span>
           </NavLink>
 
           <nav className="navbar-desktop-links" aria-label="Main navigation">
-            <NavLink
-              to="/"
-              end
-              className={({ isActive }) =>
-                `navbar-link ${isActive ? 'active' : ''}`
-              }
-            >
-              Home
-            </NavLink>
-
-            <NavLink
-              to="/events"
-              className={({ isActive }) =>
-                `navbar-link ${isActive ? 'active' : ''}`
-              }
-            >
-              Events
-            </NavLink>
+            <NavLink to="/" end className={navClass}>Home</NavLink>
+            <NavLink to="/events" className={navClass}>Events</NavLink>
 
             {isAuthenticated && (
-              <NavLink
-                to="/my-registrations"
-                className={({ isActive }) =>
-                  `navbar-link ${isActive ? 'active' : ''}`
-                }
-              >
+              <NavLink to="/my-registrations" className={navClass}>
                 My Registrations
               </NavLink>
             )}
 
             {isAdmin && (
-              <NavLink
-                to="/admin-dashboard"
-                className={({ isActive }) =>
-                  `navbar-link ${isActive ? 'active' : ''}`
-                }
-              >
+              <NavLink to="/admin-dashboard" className={navClass}>
+                <span className="navbar-admin-dot" aria-hidden="true" />
                 Admin
               </NavLink>
             )}
@@ -112,26 +116,66 @@ const Navbar = () => {
                 </button>
               </>
             ) : (
-              <>
-                <div className="navbar-user">
-                  <span className="navbar-user-avatar">
-                    {userName.charAt(0).toUpperCase()}
-                  </span>
-
-                  <div className="navbar-user-info">
-                    <strong>{userName}</strong>
-                    <span>{isAdmin ? 'admin' : 'member'}</span>
-                  </div>
-                </div>
-
+              <div className="navbar-account-wrap" ref={accountRef}>
                 <button
                   type="button"
-                  className="navbar-logout-button"
-                  onClick={handleLogout}
+                  className={`navbar-account-button ${accountOpen ? 'open' : ''}`}
+                  onClick={() => setAccountOpen((current) => !current)}
+                  aria-expanded={accountOpen}
+                  aria-haspopup="menu"
                 >
-                  Logout
+                  <span className="navbar-user-avatar">{initials}</span>
+                  <span className="navbar-user-info">
+                    <strong>{userName}</strong>
+                    <span>{isAdmin ? 'Admin account' : 'Event member'}</span>
+                  </span>
+                  <span className="navbar-account-chevron" aria-hidden="true">⌄</span>
                 </button>
-              </>
+
+                {accountOpen && (
+                  <div className="navbar-account-menu" role="menu">
+                    <div className="navbar-account-menu-head">
+                      <span className="navbar-user-avatar large">{initials}</span>
+                      <div>
+                        <strong>{userName}</strong>
+                        <span>{user?.email}</span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => navigate('/my-registrations')}
+                    >
+                      <span>▣</span>
+                      My Registrations
+                    </button>
+
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => navigate('/admin-dashboard')}
+                      >
+                        <span>◆</span>
+                        Admin Dashboard
+                      </button>
+                    )}
+
+                    <div className="navbar-account-divider" />
+
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="logout-item"
+                      onClick={handleLogout}
+                    >
+                      <span>↪</span>
+                      Sign out
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -141,6 +185,7 @@ const Navbar = () => {
             onClick={() => setMobileOpen((current) => !current)}
             aria-label="Toggle navigation menu"
             aria-expanded={mobileOpen}
+            aria-controls="eventhub-mobile-navigation"
           >
             <span />
             <span />
@@ -149,95 +194,80 @@ const Navbar = () => {
         </div>
       </header>
 
-      <div className={`navbar-mobile-panel ${mobileOpen ? 'open' : ''}`}>
-        <nav aria-label="Mobile navigation">
-          <NavLink
-            to="/"
-            end
-            className={({ isActive }) =>
-              `navbar-mobile-link ${isActive ? 'active' : ''}`
-            }
-          >
-            <span>01</span>
-            Home
-          </NavLink>
+      <div
+        id="eventhub-mobile-navigation"
+        className={`navbar-mobile-panel ${mobileOpen ? 'open' : ''}`}
+      >
+        <div className="navbar-mobile-panel-inner">
+          <div className="navbar-mobile-kicker">
+            EventHub navigation
+          </div>
 
-          <NavLink
-            to="/events"
-            className={({ isActive }) =>
-              `navbar-mobile-link ${isActive ? 'active' : ''}`
-            }
-          >
-            <span>02</span>
-            Events
-          </NavLink>
-
-          {isAuthenticated && (
-            <NavLink
-              to="/my-registrations"
-              className={({ isActive }) =>
-                `navbar-mobile-link ${isActive ? 'active' : ''}`
-              }
-            >
-              <span>03</span>
-              My Registrations
+          <nav aria-label="Mobile navigation">
+            <NavLink to="/" end className={mobileClass}>
+              <span>01</span>
+              Home
             </NavLink>
-          )}
 
-          {isAdmin && (
-            <NavLink
-              to="/admin-dashboard"
-              className={({ isActive }) =>
-                `navbar-mobile-link ${isActive ? 'active' : ''}`
-              }
-            >
-              <span>04</span>
-              Admin Dashboard
+            <NavLink to="/events" className={mobileClass}>
+              <span>02</span>
+              Events
             </NavLink>
-          )}
-        </nav>
 
-        <div className="navbar-mobile-footer">
-          {!isAuthenticated ? (
-            <div className="navbar-mobile-auth">
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileOpen(false);
-                  navigate('/login');
-                }}
-              >
-                Log in
-              </button>
+            {isAuthenticated && (
+              <NavLink to="/my-registrations" className={mobileClass}>
+                <span>03</span>
+                My Registrations
+              </NavLink>
+            )}
 
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileOpen(false);
-                  navigate('/register');
-                }}
-              >
-                Get started →
-              </button>
-            </div>
-          ) : (
-            <div className="navbar-mobile-authenticated">
-              <div className="navbar-user">
-                <span className="navbar-user-avatar">
-                  {userName.charAt(0).toUpperCase()}
-                </span>
+            {isAdmin && (
+              <NavLink to="/admin-dashboard" className={mobileClass}>
+                <span>04</span>
+                Admin Dashboard
+              </NavLink>
+            )}
+          </nav>
 
-                <div className="navbar-user-info">
-                  <strong>{userName}</strong>
-                  <span>{isAdmin ? 'admin' : 'member'}</span>
-                </div>
+          <div className="navbar-mobile-footer">
+            {!isAuthenticated ? (
+              <div className="navbar-mobile-auth">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileOpen(false);
+                    navigate('/login');
+                  }}
+                >
+                  Log in
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileOpen(false);
+                    navigate('/register');
+                  }}
+                >
+                  Get started →
+                </button>
               </div>
+            ) : (
+              <div className="navbar-mobile-authenticated">
+                <div className="navbar-user">
+                  <span className="navbar-user-avatar">{initials}</span>
+                  <div className="navbar-user-info">
+                    <strong>{userName}</strong>
+                    <span>{isAdmin ? 'Admin account' : 'Event member'}</span>
+                  </div>
+                </div>
 
-              <button type="button" onClick={handleLogout}>
-                Logout
-              </button>
-            </div>
-          )}
+                <button type="button" onClick={handleLogout}>
+                  Sign out
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

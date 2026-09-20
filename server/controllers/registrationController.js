@@ -25,6 +25,16 @@ const registerForEvent = async (req, res) => {
       });
     }
 
+    const eventEndDate = new Date(event.endDate || event.date);
+    eventEndDate.setHours(23, 59, 59, 999);
+
+    if (eventEndDate < new Date()) {
+      return res.status(410).json({
+        success: false,
+        message: 'Registration is closed for this event'
+      });
+    }
+
     const existingRegistration = await Registration.findOne({
       user: userId,
       event: eventId
