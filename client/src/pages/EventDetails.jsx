@@ -3,27 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 import apiClient from '../services/api';
 import { useAuth } from '../context/AuthContext';
-
-const formatDate = (date) => {
-  if (!date) return 'Date TBA';
-
-  return new Date(date).toLocaleDateString('en-IN', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  });
-};
-
-const formatShortDate = (date) => {
-  if (!date) return 'TBA';
-
-  return new Date(date).toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric'
-  });
-};
+import { formatEventDateRange } from '../utils/eventDate';
 
 const formatPrice = (price) => {
   const numericPrice = Number(price);
@@ -120,12 +100,12 @@ const EventDetails = () => {
   }, [eventId, isAuthenticated]);
 
   const eventDate = useMemo(
-    () => formatDate(event?.date),
+    () => formatEventDateRange(event?.date, event?.endDate, { long: true }),
     [event]
   );
 
   const shortDate = useMemo(
-    () => formatShortDate(event?.date),
+    () => formatEventDateRange(event?.date, event?.endDate),
     [event]
   );
 
@@ -140,8 +120,8 @@ const EventDetails = () => {
     return `${event.capacity} seats`;
   }, [event]);
 
-  const organizerName = useMemo(() => {
-    if (!event?.organizer) return 'Event Organizer';
+  const presentedBy = useMemo(() => {
+    if (!event?.organizer) return 'EventHub';
 
     if (typeof event.organizer === 'string') {
       return event.organizer;
@@ -151,7 +131,7 @@ const EventDetails = () => {
       event.organizer.name ||
       event.organizer.fullName ||
       event.organizer.username ||
-      'Event Organizer'
+      'EventHub'
     );
   }, [event]);
 
@@ -442,20 +422,20 @@ const EventDetails = () => {
 
             <div className="event-details-section organizer-section">
               <p className="section-eyebrow">
-                ORGANIZED BY
+                PRESENTED BY
               </p>
 
               <div className="event-organizer-card">
                 <div className="organizer-avatar">
-                  {organizerName
+                  {presentedBy
                     .charAt(0)
                     .toUpperCase()}
                 </div>
 
                 <div>
-                  <h3>{organizerName}</h3>
+                  <h3>{presentedBy}</h3>
                   <p>
-                    Event organizer
+                    EventHub event team
                   </p>
                 </div>
               </div>

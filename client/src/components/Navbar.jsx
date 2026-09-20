@@ -5,9 +5,7 @@ import { useAuth } from '../context/AuthContext';
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-
   const { user, isAuthenticated, logout } = useAuth();
-
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
@@ -33,15 +31,13 @@ const Navbar = () => {
 
     return (
       user.name ||
-      user.fullName ||
-      user.username ||
       user.email?.split('@')[0] ||
       'Account'
     );
   };
 
-  const userRole = String(user?.role || '').toLowerCase();
   const userName = getUserName();
+  const isAdmin = user?.role === 'admin';
 
   return (
     <>
@@ -83,18 +79,7 @@ const Navbar = () => {
               </NavLink>
             )}
 
-            {isAuthenticated && userRole === 'organizer' && (
-              <NavLink
-                to="/organizer-dashboard"
-                className={({ isActive }) =>
-                  `navbar-link ${isActive ? 'active' : ''}`
-                }
-              >
-                Organizer
-              </NavLink>
-            )}
-
-            {isAuthenticated && userRole === 'admin' && (
+            {isAdmin && (
               <NavLink
                 to="/admin-dashboard"
                 className={({ isActive }) =>
@@ -135,7 +120,7 @@ const Navbar = () => {
 
                   <div className="navbar-user-info">
                     <strong>{userName}</strong>
-                    <span>{userRole || 'member'}</span>
+                    <span>{isAdmin ? 'admin' : 'member'}</span>
                   </div>
                 </div>
 
@@ -152,9 +137,7 @@ const Navbar = () => {
 
           <button
             type="button"
-            className={`navbar-menu-button ${
-              mobileOpen ? 'open' : ''
-            }`}
+            className={`navbar-menu-button ${mobileOpen ? 'open' : ''}`}
             onClick={() => setMobileOpen((current) => !current)}
             aria-label="Toggle navigation menu"
             aria-expanded={mobileOpen}
@@ -166,11 +149,7 @@ const Navbar = () => {
         </div>
       </header>
 
-      <div
-        className={`navbar-mobile-panel ${
-          mobileOpen ? 'open' : ''
-        }`}
-      >
+      <div className={`navbar-mobile-panel ${mobileOpen ? 'open' : ''}`}>
         <nav aria-label="Mobile navigation">
           <NavLink
             to="/"
@@ -205,19 +184,7 @@ const Navbar = () => {
             </NavLink>
           )}
 
-          {isAuthenticated && userRole === 'organizer' && (
-            <NavLink
-              to="/organizer-dashboard"
-              className={({ isActive }) =>
-                `navbar-mobile-link ${isActive ? 'active' : ''}`
-              }
-            >
-              <span>04</span>
-              Organizer Dashboard
-            </NavLink>
-          )}
-
-          {isAuthenticated && userRole === 'admin' && (
+          {isAdmin && (
             <NavLink
               to="/admin-dashboard"
               className={({ isActive }) =>
@@ -262,14 +229,11 @@ const Navbar = () => {
 
                 <div className="navbar-user-info">
                   <strong>{userName}</strong>
-                  <span>{userRole || 'member'}</span>
+                  <span>{isAdmin ? 'admin' : 'member'}</span>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={handleLogout}
-              >
+              <button type="button" onClick={handleLogout}>
                 Logout
               </button>
             </div>

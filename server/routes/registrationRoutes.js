@@ -8,19 +8,19 @@ const {
 } = require('../controllers/registrationController');
 
 const auth = require('../middleware/auth');
+const authorizeRoles = require('../middleware/role');
 
 const router = express.Router();
 
-// Authenticated user
 router.post('/:eventId', auth, registerForEvent);
-
-// Authenticated user
 router.get('/my', auth, getMyRegistrations);
-
-// Authenticated user; controller verifies ownership
 router.delete('/:registrationId', auth, cancelRegistration);
 
-// Authenticated organizer/admin; controller verifies permissions
-router.get('/event/:eventId', auth, getEventRegistrations);
+router.get(
+  '/event/:eventId',
+  auth,
+  authorizeRoles('admin'),
+  getEventRegistrations
+);
 
 module.exports = router;

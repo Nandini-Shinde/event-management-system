@@ -31,7 +31,7 @@ const getEvents = async (req, res) => {
     const [events, total] = await Promise.all([
       Event.find(filter)
         .populate('organizer', 'name email')
-        .sort({ createdAt: -1 })
+        .sort({ date: 1, createdAt: -1 })
         .skip(skip)
         .limit(perPage),
 
@@ -100,6 +100,7 @@ const createEvent = async (req, res) => {
       description,
       category,
       date,
+      endDate,
       time,
       location,
       capacity,
@@ -107,11 +108,29 @@ const createEvent = async (req, res) => {
       image
     } = req.body;
 
+    const startDate = new Date(date);
+    const resolvedEndDate = endDate ? new Date(endDate) : startDate;
+
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(resolvedEndDate.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide valid event dates'
+      });
+    }
+
+    if (resolvedEndDate < startDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'End date cannot be before the start date'
+      });
+    }
+
     const event = await Event.create({
       title,
       description,
       category,
-      date,
+      date: startDate,
+      endDate: resolvedEndDate,
       time,
       location,
       capacity,
@@ -159,23 +178,12 @@ const updateEvent = async (req, res) => {
       });
     }
 
-    const isOwner =
-      event.organizer.toString() === req.user._id.toString();
-
-    const isAdmin = req.user.role === 'admin';
-
-    if (!isOwner && !isAdmin) {
-      return res.status(403).json({
-        success: false,
-        message: 'You do not have permission to update this event'
-      });
-    }
-
     const allowedFields = [
       'title',
       'description',
       'category',
       'date',
+      'endDate',
       'time',
       'location',
       'capacity',
@@ -187,6 +195,17 @@ const updateEvent = async (req, res) => {
       if (req.body[field] !== undefined) {
         event[field] = req.body[field];
       }
+    }
+
+    if (!event.endDate) {
+      event.endDate = event.date;
+    }
+
+    if (event.endDate < event.date) {
+      return res.status(400).json({
+        success: false,
+        message: 'End date cannot be before the start date'
+      });
     }
 
     await event.save();
@@ -227,18 +246,6 @@ const deleteEvent = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Event not found'
-      });
-    }
-
-    const isOwner =
-      event.organizer.toString() === req.user._id.toString();
-
-    const isAdmin = req.user.role === 'admin';
-
-    if (!isOwner && !isAdmin) {
-      return res.status(403).json({
-        success: false,
-        message: 'You do not have permission to delete this event'
       });
     }
 

@@ -6,7 +6,6 @@ const cors = require('cors');
 const connectToDatabase = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const eventRoutes = require('./routes/eventRoutes');
-const devRoutes = require('./routes/devRoutes');
 const registrationRoutes = require('./routes/registrationRoutes');
 
 const app = express();
@@ -25,7 +24,6 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/events', eventRoutes);
-app.use('/api/dev', devRoutes);
 app.use('/api/registrations', registrationRoutes);
 
 const startServer = async () => {

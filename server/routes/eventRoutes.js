@@ -19,21 +19,21 @@ router.get('/:id', getEventById);
 router.post(
   '/',
   auth,
-  authorizeRoles('organizer', 'admin'),
+  authorizeRoles('admin'),
   createEvent
 );
 
 router.put(
   '/:id',
   auth,
-  authorizeRoles('organizer', 'admin'),
+  authorizeRoles('admin'),
   updateEvent
 );
 
 router.delete(
   '/:id',
   auth,
-  authorizeRoles('organizer', 'admin'),
+  authorizeRoles('admin'),
   deleteEvent
 );
 

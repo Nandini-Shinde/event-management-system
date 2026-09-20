@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const Registration = require('../models/Registration');
 const Event = require('../models/Event');
 
+const eventFields = 'title description category date endDate time location capacity price image';
+
 const registerForEvent = async (req, res) => {
   try {
     const { eventId } = req.params;
@@ -23,7 +25,6 @@ const registerForEvent = async (req, res) => {
       });
     }
 
-    // Check whether the user already has an active registration.
     const existingRegistration = await Registration.findOne({
       user: userId,
       event: eventId
@@ -39,7 +40,6 @@ const registerForEvent = async (req, res) => {
       });
     }
 
-    // Count only active registrations.
     const registeredCount = await Registration.countDocuments({
       event: eventId,
       status: 'registered'
@@ -54,14 +54,12 @@ const registerForEvent = async (req, res) => {
 
     let registration;
 
-    // Re-activate an old cancelled registration.
     if (
       existingRegistration &&
       existingRegistration.status === 'cancelled'
     ) {
       existingRegistration.status = 'registered';
       existingRegistration.registrationDate = new Date();
-
       registration = await existingRegistration.save();
     } else {
       registration = await Registration.create({
@@ -74,10 +72,7 @@ const registerForEvent = async (req, res) => {
       registration._id
     )
       .populate('user', 'name email')
-      .populate(
-        'event',
-        'title description category date time location capacity price image'
-      );
+      .populate('event', eventFields);
 
     return res.status(201).json({
       success: true,
@@ -87,7 +82,6 @@ const registerForEvent = async (req, res) => {
   } catch (error) {
     console.error('Register for event error:', error);
 
-    // Handles a duplicate-registration race condition.
     if (error.code === 11000) {
       return res.status(409).json({
         success: false,
@@ -108,10 +102,7 @@ const getMyRegistrations = async (req, res) => {
       user: req.user._id
     })
       .populate('user', 'name email')
-      .populate(
-        'event',
-        'title description category date time location capacity price image'
-      )
+      .populate('event', eventFields)
       .sort({ registrationDate: -1 });
 
     return res.status(200).json({
@@ -169,10 +160,7 @@ const cancelRegistration = async (req, res) => {
       registration._id
     )
       .populate('user', 'name email')
-      .populate(
-        'event',
-        'title description category date time location capacity price image'
-      );
+      .populate('event', eventFields);
 
     return res.status(200).json({
       success: true,
@@ -209,32 +197,20 @@ const getEventRegistrations = async (req, res) => {
       });
     }
 
-    const isAdmin = req.user.role === 'admin';
-
-    const isOrganizer =
-      req.user.role === 'organizer' &&
-      event.organizer.toString() === req.user._id.toString();
-
-    if (!isAdmin && !isOrganizer) {
-      return res.status(403).json({
-        success: false,
-        message: 'You do not have permission to view these registrations'
-      });
-    }
-
     const registrations = await Registration.find({
       event: eventId,
       status: 'registered'
     })
       .populate('user', 'name email')
-      .populate(
-        'event',
-        'title description category date time location capacity price'
-      )
       .sort({ registrationDate: -1 });
 
     return res.status(200).json({
       success: true,
+      event: {
+        _id: event._id,
+        title: event.title,
+        capacity: event.capacity
+      },
       registrations
     });
   } catch (error) {

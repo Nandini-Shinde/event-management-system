@@ -3,16 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import apiClient from '../services/api';
 import EventCard from '../components/EventCard';
-
-const formatDate = (date) => {
-  if (!date) return 'Date TBA';
-
-  return new Date(date).toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric'
-  });
-};
+import { formatEventDateRange } from '../utils/eventDate';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -52,7 +43,7 @@ const Home = () => {
 
   const heroEventTitle = heroEvent?.title || 'Tech Fest 2026';
   const heroEventCategory = heroEvent?.category || 'Technology';
-  const heroEventDate = formatDate(heroEvent?.date || '2026-12-15');
+  const heroEventDate = formatEventDateRange(heroEvent?.date || '2026-12-15', heroEvent?.endDate);
   const heroEventLocation =
     heroEvent?.location || 'College Auditorium';
 

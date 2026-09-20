@@ -21,9 +21,23 @@ const eventSchema = new mongoose.Schema(
       trim: true
     },
 
+    // Start date. Kept as `date` for backwards compatibility with existing events.
     date: {
       type: Date,
       required: [true, 'Date is required']
+    },
+
+    // Optional end date for multi-day events.
+    endDate: {
+      type: Date,
+      default: null,
+      validate: {
+        validator(value) {
+          if (!value || !this.date) return true;
+          return value >= this.date;
+        },
+        message: 'End date cannot be before the start date'
+      }
     },
 
     time: {
@@ -56,6 +70,7 @@ const eventSchema = new mongoose.Schema(
       default: ''
     },
 
+    // Kept as creator metadata; it is NOT a permission/role concept.
     organizer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

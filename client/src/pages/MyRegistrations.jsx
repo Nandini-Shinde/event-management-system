@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/api';
+import { formatEventDateRange } from '../utils/eventDate';
 
 const MyRegistrations = () => {
   const navigate = useNavigate();
@@ -17,15 +18,13 @@ const MyRegistrations = () => {
 
       const response = await apiClient.get('/registrations/my');
 
-      setRegistrations(
-        response.data.registrations || []
-      );
+      setRegistrations(response.data.registrations || []);
     } catch (err) {
       console.error('Registrations error:', err);
 
       setError(
         err.response?.data?.message ||
-        'Unable to load your registrations.'
+          'Unable to load your registrations.'
       );
     } finally {
       setLoading(false);
@@ -36,9 +35,18 @@ const MyRegistrations = () => {
     fetchRegistrations();
   }, []);
 
-  const handleCancel = async (registrationId) => {
+  const handleCancel = async (registrationId, eventTitle) => {
+    const confirmed = window.confirm(
+      `Cancel your registration for "${eventTitle}"?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
     try {
       setCancellingId(registrationId);
+      setError('');
 
       await apiClient.delete(
         `/registrations/${registrationId}`
@@ -48,25 +56,70 @@ const MyRegistrations = () => {
     } catch (err) {
       setError(
         err.response?.data?.message ||
-        'Unable to cancel registration.'
+          'Unable to cancel registration.'
       );
     } finally {
       setCancellingId(null);
     }
   };
 
+  const formatRegistrationDate = (date) => {
+    if (!date) return '';
+
+    return new Date(date).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
+
+  const activeRegistrations = registrations.filter(
+    (registration) => registration.status === 'registered'
+  );
+
+  const cancelledRegistrations = registrations.filter(
+    (registration) => registration.status === 'cancelled'
+  );
+
   if (loading) {
     return (
       <div className="registrations-page">
-        <div className="registrations-hero">
-          <p className="section-eyebrow">YOUR EXPERIENCES</p>
-          <h1>My Registrations</h1>
-        </div>
 
-        <div className="registrations-state">
-          <div className="loading-dot"></div>
-          <p>Loading your registrations...</p>
-        </div>
+        <section className="registrations-hero">
+          <div>
+            <p className="section-eyebrow">
+              YOUR EXPERIENCES
+            </p>
+
+            <h1>My Registrations</h1>
+
+            <p>
+              Keep track of the events you've joined.
+            </p>
+          </div>
+        </section>
+
+        <section className="registrations-content">
+          <div className="registrations-loading-grid">
+            {[1, 2, 3].map((item) => (
+              <div
+                className="registration-skeleton"
+                key={item}
+              >
+                <div className="registration-skeleton-image"></div>
+
+                <div className="registration-skeleton-content">
+                  <div className="registration-skeleton-line small"></div>
+                  <div className="registration-skeleton-line title"></div>
+                  <div className="registration-skeleton-line"></div>
+                  <div className="registration-skeleton-line"></div>
+                  <div className="registration-skeleton-button"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
       </div>
     );
   }
@@ -75,162 +128,278 @@ const MyRegistrations = () => {
     <div className="registrations-page">
 
       <section className="registrations-hero">
-        <p className="section-eyebrow">
-          YOUR EXPERIENCES
-        </p>
 
-        <h1>My Registrations</h1>
+        <div className="registrations-hero-copy">
 
-        <p>
-          Keep track of the events you've joined.
-        </p>
+          <p className="section-eyebrow">
+            YOUR EXPERIENCES
+          </p>
+
+          <h1>My Registrations</h1>
+
+          <p>
+            Keep track of the events you've joined,
+            revisit the details, or cancel a registration.
+          </p>
+
+        </div>
+
+        <div className="registrations-summary">
+
+          <div className="registration-stat">
+            <strong>{registrations.length}</strong>
+            <span>Total</span>
+          </div>
+
+          <div className="registration-stat">
+            <strong>{activeRegistrations.length}</strong>
+            <span>Active</span>
+          </div>
+
+          <div className="registration-stat">
+            <strong>{cancelledRegistrations.length}</strong>
+            <span>Cancelled</span>
+          </div>
+
+        </div>
+
       </section>
 
       <section className="registrations-content">
 
         {error && (
-          <div className="auth-error">
-            {error}
+          <div className="registrations-error">
+            <div>
+              <strong>Something went wrong.</strong>
+              <p>{error}</p>
+            </div>
+
+            <button
+              type="button"
+              onClick={fetchRegistrations}
+            >
+              Try again
+            </button>
           </div>
         )}
 
         {registrations.length === 0 ? (
           <div className="registrations-empty">
+
             <div className="registrations-empty-icon">
               ✦
             </div>
 
-            <h2>No registrations yet</h2>
+            <p className="registrations-empty-label">
+              NOTHING HERE YET
+            </p>
 
-            <p>
-              You haven't registered for any events.
-              Discover something worth experiencing.
+            <h2>
+              Your next experience
+              <br />
+              starts here.
+            </h2>
+
+            <p className="registrations-empty-description">
+              You haven't registered for any events yet.
+              Explore what's happening and find something
+              worth experiencing.
             </p>
 
             <button
+              type="button"
               onClick={() => navigate('/events')}
             >
-              Explore Events →
+              Explore Events
+              <span>→</span>
             </button>
+
           </div>
         ) : (
-          <div className="registrations-grid">
+          <div className="registrations-list">
 
-            {registrations.map((registration) => {
-              const event = registration.event;
+            <div className="registrations-list-header">
+              <div>
+                <p className="section-eyebrow">
+                  YOUR EVENTS
+                </p>
 
-              if (!event) return null;
+                <h2>
+                  Registered events
+                </h2>
+              </div>
 
-              const formattedDate =
-                new Date(event.date).toLocaleDateString(
-                  'en-IN',
-                  {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric'
-                  }
-                );
+              <button
+                type="button"
+                className="registrations-refresh"
+                onClick={fetchRegistrations}
+              >
+                ↻ Refresh
+              </button>
+            </div>
 
-              const isActive =
-                registration.status === 'registered';
+            <div className="registrations-grid">
 
-              return (
-                <article
-                  key={registration._id}
-                  className="registration-card"
-                >
+              {registrations.map((registration) => {
+                const event = registration.event;
 
-                  <div className="registration-card-image">
-                    {event.image ? (
-                      <img
-                        src={event.image}
-                        alt={event.title}
-                      />
-                    ) : (
-                      <div>
-                        EVENT
-                      </div>
-                    )}
-                  </div>
+                if (!event) {
+                  return null;
+                }
 
-                  <div className="registration-card-body">
+                const isActive =
+                  registration.status === 'registered';
 
-                    <div className="registration-card-top">
-                      <span className="event-card-category">
-                        {event.category}
+                return (
+                  <article
+                    key={registration._id}
+                    className={`registration-card ${
+                      !isActive
+                        ? 'registration-card-cancelled'
+                        : ''
+                    }`}
+                  >
+
+                    <div className="registration-card-image">
+
+                      {event.image ? (
+                        <img
+                          src={event.image}
+                          alt={event.title}
+                        />
+                      ) : (
+                        <div className="registration-image-placeholder">
+                          <span>EVENT</span>
+                        </div>
+                      )}
+
+                      <span className="registration-image-category">
+                        {event.category || 'General'}
                       </span>
 
-                      <span
-                        className={
-                          isActive
-                            ? 'registration-status active'
-                            : 'registration-status cancelled'
-                        }
-                      >
-                        {registration.status}
-                      </span>
                     </div>
 
-                    <h2>{event.title}</h2>
+                    <div className="registration-card-body">
 
-                    <p>📅 {formattedDate}</p>
+                      <div className="registration-card-top">
 
-                    <p>🕒 {event.time}</p>
+                        <span
+                          className={`registration-status ${
+                            isActive
+                              ? 'active'
+                              : 'cancelled'
+                          }`}
+                        >
+                          <span className="status-dot"></span>
+                          {isActive
+                            ? 'Registered'
+                            : 'Cancelled'}
+                        </span>
 
-                    <p>📍 {event.location}</p>
+                        <span className="registration-date">
+                          Registered{' '}
+                          {formatRegistrationDate(
+                            registration.createdAt
+                          )}
+                        </span>
 
-                    <p>
-                      {event.price === 0
-                        ? 'Free'
-                        : `₹${event.price}`}
-                    </p>
+                      </div>
 
-                    <div className="registration-actions">
+                      <h2>
+                        {event.title}
+                      </h2>
 
-                      <button
-                        className="registration-view-button"
-                        onClick={() =>
-                          navigate(
-                            `/events/${event._id}`
-                          )
-                        }
-                      >
-                        View Event
-                      </button>
+                      <div className="registration-details">
 
-                      {isActive && (
+                        <div>
+                          <span className="registration-detail-icon">
+                            ◷
+                          </span>
+
+                          <span>
+                            {formatEventDateRange(event.date, event.endDate)}
+                            {event.time
+                              ? ` · ${event.time}`
+                              : ''}
+                          </span>
+                        </div>
+
+                        <div>
+                          <span className="registration-detail-icon">
+                            ◉
+                          </span>
+
+                          <span>
+                            {event.location ||
+                              'Location unavailable'}
+                          </span>
+                        </div>
+
+                        <div>
+                          <span className="registration-detail-icon">
+                            ₹
+                          </span>
+
+                          <span>
+                            {Number(event.price || 0) === 0
+                              ? 'Free'
+                              : `₹${event.price}`}
+                          </span>
+                        </div>
+
+                      </div>
+
+                      <div className="registration-actions">
+
                         <button
-                          className="registration-cancel-button"
-                          disabled={
-                            cancellingId ===
-                            registration._id
-                          }
+                          type="button"
+                          className="registration-view-button"
                           onClick={() =>
-                            handleCancel(
-                              registration._id
+                            navigate(
+                              `/events/${event._id}`
                             )
                           }
                         >
-                          {cancellingId ===
-                          registration._id
-                            ? 'Cancelling...'
-                            : 'Cancel'}
+                          View Event
+                          <span>→</span>
                         </button>
-                      )}
+
+                        {isActive && (
+                          <button
+                            type="button"
+                            className="registration-cancel-button"
+                            disabled={
+                              cancellingId ===
+                              registration._id
+                            }
+                            onClick={() =>
+                              handleCancel(
+                                registration._id,
+                                event.title
+                              )
+                            }
+                          >
+                            {cancellingId ===
+                            registration._id
+                              ? 'Cancelling...'
+                              : 'Cancel'}
+                          </button>
+                        )}
+
+                      </div>
 
                     </div>
 
-                  </div>
+                  </article>
+                );
+              })}
 
-                </article>
-              );
-            })}
+            </div>
 
           </div>
         )}
 
       </section>
-
     </div>
   );
 };
